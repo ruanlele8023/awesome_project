@@ -1,0 +1,23 @@
+[package]
+name = "awesome_project"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7", features = ["macros"] }
+axum-extra = "0.9"
+tokio = { version = "1.0", features = ["full"] }
+config = "0.13"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+tracing-appender = "0.2"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+sea-orm = { version = "0.12", features = [
+    "sqlx-mysql",
+    "runtime-tokio-rustls",
+    "macros",
+    "debug-print",
+] }
