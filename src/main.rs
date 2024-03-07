@@ -5,7 +5,8 @@ mod router;
 mod controller;
 mod data;
 mod service;
-
+mod entity;
+mod util;
 
 #[tokio::main]
 async fn main() {

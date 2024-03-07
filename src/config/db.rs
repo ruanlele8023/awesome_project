@@ -31,3 +31,7 @@ pub async fn init(cfg: &Config) {
 
     let _ = DB.set(conn);
 }
+
+pub fn conn() -> &'static DatabaseConnection {
+    DB.get().unwrap_or_else(|| panic!("数据库连接未初始化"))
+}
