@@ -1,19 +1,82 @@
 use std::collections::HashMap;
-use sea_orm::{ColumnTrait, EntityTrait, Order, QueryFilter, QueryOrder, QuerySelect, QueryTrait};
-use serde::Serialize;
+use sea_orm::{ColumnTrait, Condition, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Set};
+use sea_orm::prelude::DateTimeUtc;
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 use crate::config::db;
 use crate::data::result::response::{ApiErr, ApiOK};
 use crate::data::result::response::Result;
-use crate::entity::{prelude::*,t_table_info};
+use crate::entity::{prelude::*, t_table_info};
 use crate::entity::t_table_info::Model;
 use crate::util;
 
 #[derive(Debug, Serialize)]
-pub struct TableInfoResp {
+pub struct TableInfoListResp {
+    pub total: u64,
     pub list: Vec<Model>,
 }
 
-pub async fn get(query: HashMap<String, String>) -> Result<ApiOK<TableInfoResp>> {
+#[derive(Debug, Serialize)]
+pub struct CreateResp {
+    pub id: u64,
+}
+
+#[derive(Debug, Validate, Deserialize, Serialize)]
+pub struct CreateReq {
+    #[validate(length(min = 1, message = "domain 不能为空"))]
+    pub domain: String,
+    pub sub_domain: String,
+    #[validate(length(min = 1, message = "table_info_name 不能为空"))]
+    pub table_info_name: String,
+    pub table_fields: String,
+}
+
+pub async fn insert(req: CreateReq) -> Result<ApiOK<CreateResp>> {
+    match TTableInfo::find()
+        .filter(
+            Condition::all()
+                .add(t_table_info::Column::TableInfoName.eq(req.table_info_name.clone()))
+                .add(t_table_info::Column::TableInfoName.eq(req.domain.clone()))
+        ).count(db::conn())
+        .await
+    {
+        Err(err) => {
+            tracing::error!(error = ?err, "err find project");
+            return Err(ApiErr::ErrSystem(None));
+        }
+        Ok(v) => {
+            if v > 0 {
+                return Err(ApiErr::ErrPerm(Some("该编号已被使用".to_string())));
+            }
+        }
+    }
+
+    let now = chrono::Local::now();
+
+    let am = t_table_info::ActiveModel {
+        table_info_name: Set(req.table_info_name),
+        sub_domain: Set(req.sub_domain),
+        domain: Set(req.domain),
+        create_at: Set(DateTimeUtc::from(now)),
+        ..Default::default()
+    };
+
+    let last_insert_id = match  TTableInfo::insert(am).exec(db::conn()).await {
+        Err(err) => {
+            tracing::error!(error = ?err, "err count project");
+            return Err(ApiErr::ErrSystem(None));
+        }
+        Ok(v) => v.last_insert_id,
+    };
+
+    let resp = CreateResp {
+        id : last_insert_id,
+    };
+
+    Ok(ApiOK(Some(resp)))
+}
+
+pub async fn get(query: HashMap<String, String>) -> Result<ApiOK<TableInfoListResp>> {
     let mut builder = TTableInfo::find();
 
     // let resp = TableInfoResp {
@@ -41,8 +104,9 @@ pub async fn get(query: HashMap<String, String>) -> Result<ApiOK<TableInfoResp>>
         Ok(v) => v,
     };
 
-    let resp = TableInfoResp {
-        list : table_info_list,
+    let resp = TableInfoListResp {
+        total: 0,
+        list: table_info_list,
     };
     Ok(ApiOK(Some(resp)))
     // Ok(ApiOK(Some(resp)))

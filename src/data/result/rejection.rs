@@ -30,3 +30,5 @@ impl IntoResponse for MyRejection {
         err.into_response()
     }
 }
+
+pub type IRejection<T> = WithRejection<T, MyRejection>;
