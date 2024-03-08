@@ -10,7 +10,7 @@ mod util;
 
 #[tokio::main]
 async fn main() {
-    let config_str = String::from("/Users/bytedance/RustroverProjects/awesome_project/src/config.toml");
+    let config_str = String::from("abc");
     cfg::init(&config_str);
     db::init(cfg::config()).await;
     config::serve::serve().await;
