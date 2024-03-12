@@ -28,7 +28,7 @@ pub struct CreateReq {
     pub sub_domain: String,
     #[validate(length(min = 1, message = "table_info_name 不能为空"))]
     pub table_info_name: String,
-    pub table_fields: String,
+    pub table_fields: Option<String>,
 }
 
 pub async fn insert(req: CreateReq) -> Result<ApiOK<CreateResp>> {
@@ -36,7 +36,7 @@ pub async fn insert(req: CreateReq) -> Result<ApiOK<CreateResp>> {
         .filter(
             Condition::all()
                 .add(t_table_info::Column::TableInfoName.eq(req.table_info_name.clone()))
-                .add(t_table_info::Column::TableInfoName.eq(req.domain.clone()))
+                .add(t_table_info::Column::Domain.eq(req.domain.clone()))
         ).count(db::conn())
         .await
     {
@@ -57,6 +57,7 @@ pub async fn insert(req: CreateReq) -> Result<ApiOK<CreateResp>> {
         table_info_name: Set(req.table_info_name),
         sub_domain: Set(req.sub_domain),
         domain: Set(req.domain),
+        table_fields: Set(req.table_fields.unwrap_or(String::from(""))),
         create_at: Set(DateTimeUtc::from(now)),
         ..Default::default()
     };
