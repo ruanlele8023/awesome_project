@@ -5,6 +5,6 @@ use crate::data::result::response::Result;
 use crate::service;
 
 pub async fn add(mut multipart: Multipart
-) -> Result<ApiOK<()>> {
-    service::upload::add()
+) -> Result<ApiOK<String>> {
+    service::upload::add(multipart).await
 }

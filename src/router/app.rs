@@ -1,6 +1,5 @@
 use axum::Router;
 use axum::routing::{get, post};
-use axum::extract::multipart;
 use crate::controller;
 
 pub fn init() -> Router{
@@ -10,7 +9,7 @@ pub fn init() -> Router{
         .route("/insert", post(controller::table_info_controller::insert));
 
     let upload_router = Router::new()
-        .rout("/add", post(controller::upload_controller::add));
+        .route("/add", post(controller::upload_controller::add));
 
     Router::new()
         .route("/hello", get(hello))
