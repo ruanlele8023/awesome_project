@@ -21,7 +21,7 @@ pub struct CreateResp {
     pub id: u64,
 }
 
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, Clone)]
 pub struct CreateReq {
     #[validate(length(min = 1, message = "domain 不能为空"))]
     pub domain: String,
@@ -110,5 +110,4 @@ pub async fn get(query: HashMap<String, String>) -> Result<ApiOK<TableInfoListRe
         list: table_info_list,
     };
     Ok(ApiOK(Some(resp)))
-    // Ok(ApiOK(Some(resp)))
 }
