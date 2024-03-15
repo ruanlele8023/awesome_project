@@ -4,12 +4,15 @@ use crate::data::result::response::{ApiErr, ApiOK};
 use crate::data::result::response::Result;
 use std::str;
 use axum::response::IntoResponse;
+use sea_orm::prelude::DateTimeUtc;
+use sea_orm::Set;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
-use crate::service::table_info;
+use crate::entity::{t_capital_rule, t_capital_rule_chain, t_table_info};
+use crate::service::{dao, table_info};
 use crate::service::table_info::CreateReq;
 
-pub async fn add(mut multipart: Multipart) -> Result<ApiOK<Vec<HashMap<String, String>>>> {
+pub async fn add(mut multipart: Multipart) -> Result<ApiOK<()>> {
     let file_option = multipart.next_field().await.unwrap();
     if file_option.is_none() {
         return  Ok(ApiOK(None));
@@ -35,7 +38,9 @@ pub async fn add(mut multipart: Multipart) -> Result<ApiOK<Vec<HashMap<String, S
         vec.push(map);
     }
 
-    Ok(ApiOK(Some(vec)))
+    deal_with_records(vec).await;
+
+    Ok(ApiOK(None))
 }
 
 #[derive(Debug, Clone)]
@@ -60,8 +65,11 @@ struct RuleChain {
     pub table_info_name: String,
 }
 
-pub fn deal_with_records(records: Vec<HashMap<String, String>>) {
-
+pub async fn deal_with_records(records: Vec<HashMap<String, String>>) {
+    for record in records {
+        let standard_req = standard_request(record);
+        deal_with_standard_req(standard_req).await;
+    }
 }
 
 fn standard_request(map: HashMap<String, String>) -> StandardReq {
@@ -106,7 +114,48 @@ fn standard_request(map: HashMap<String, String>) -> StandardReq {
 }
 
 pub async fn deal_with_standard_req(standard_req: StandardReq) {
-    
+
+    let now = chrono::Local::now();
+
+    let am2 = t_capital_rule::ActiveModel {
+        rule_url: Set(standard_req.rule_id.clone()),
+        create_at: Set(DateTimeUtc::from(now)),
+        ..Default::default()
+    };
+
+    _ = dao::atomic_capital_rule::insert(am2);
+
+    for mut chain in standard_req.rule_chains {
+        let table_info = dao::atomic_table_info::get_by_name_domain(Some(chain.table_info_name.clone()), Some(chain.domain.clone())).await;
+
+        let mut table_info_id : u64 = 0;
+
+        if !table_info.is_empty() {
+            table_info_id = table_info.get(0).unwrap().id
+        }
+
+
+
+        let am = t_table_info::ActiveModel {
+            table_info_name: Set(chain.table_info_name.clone()),
+            sub_domain: Set(String::from("")),
+            domain: Set(chain.domain.clone()),
+            table_fields: Set(String::from("")),
+            create_at: Set(DateTimeUtc::from(now)),
+            ..Default::default()
+        };
+
+        table_info_id = dao::atomic_table_info::insert(am).await.unwrap();
+
+        let am1 = t_capital_rule_chain::ActiveModel {
+            rule_id: Set(standard_req.rule_id.clone()),
+                start: Set(1),
+                end: Set(1),
+                ..Default::default()
+        };
+
+        _ = dao::atomic_capital_rule_chain::insert(am1).await
+    }
 }
 
 pub async fn deal_with_record(map: HashMap<String, String>) {

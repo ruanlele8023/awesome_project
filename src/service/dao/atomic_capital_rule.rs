@@ -1,35 +1,14 @@
-use sea_orm::{ColumnTrait, EntityTrait, Order, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::EntityTrait;
 use crate::config::db;
-use crate::data::result::response::{ApiErr, ApiOK};
-use crate::entity::prelude::TTableInfo;
-use crate::entity::t_table_info;
-use crate::entity::t_table_info::Model;
-use crate::service::table_info;
-use crate::service::table_info::TableInfoListResp;
+use crate::entity::prelude::TCapitalRule;
+use crate::entity::t_capital_rule;
 
-pub async fn get_by_name_domain(table_name: Option<String>, domain: Option<String>) -> Vec<Model> {
-    let mut builder = TTableInfo::find();
-
-    // let resp = TableInfoResp {
-    //     id: 0,
-    // };
-    if table_name {
-        builder = builder.filter(t_table_info::Column::TableInfoName.eq(table_name.clone()))
-    }
-
-    if domain {
-        builder = builder.filter(t_table_info::Column::Domain.eq(domain.clone()))
-    }
-
-    match builder
-        .order_by(t_table_info::Column::Id, Order::Desc)
-        .offset(0)
-        .limit(1)
-        .all(db::conn()).await {
+pub async fn insert(am: t_capital_rule::ActiveModel) -> Option<u64> {
+    match  TCapitalRule::insert(am).exec(db::conn()).await {
         Err(err) => {
-            tracing::error!(error = ?err, "err find project");
-            return Vec::new();
+            tracing::error!(error = ?err, "err count project");
+            return None;
         }
-        Ok(v) => v,
-    };
+        Ok(v) =>  Some(v.last_insert_id),
+    }
 }

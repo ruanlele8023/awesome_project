@@ -6,6 +6,6 @@ use crate::data::result::response::Result;
 use crate::service;
 
 pub async fn add(mut multipart: Multipart
-) -> Result<ApiOK<Vec<HashMap<String, String>>>> {
+) -> Result<ApiOK<()>> {
     service::upload::add(multipart).await
 }
