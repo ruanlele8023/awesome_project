@@ -11,10 +11,14 @@ pub fn init() -> Router{
     let upload_router = Router::new()
         .route("/add", post(controller::upload_controller::add));
 
+    let plant_uml_router = Router::new()
+        .route("/generate", post(controller::plant_uml_controller::generate));
+
     Router::new()
         .route("/hello", get(hello))
         .nest("/table_info", table_router)
         .nest("/upload", upload_router)
+        .nest("/plant_uml", plant_uml_router)
 }
 
 async fn hello() -> String {
