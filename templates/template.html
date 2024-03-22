@@ -1,0 +1,27 @@
+@startuml
+left to right direction
+' Horizontal lines: -->, <--, <-->, x-->, ..
+' Vertical lines: ->, <-, <->
+
+title
+ <u>售后相关规则整理</u>
+ <u>备注</u>
+<font color=red> ... </font> 代表 挖掘出潜在缺少的规则
+ on <i>several</i> lines and using <font color=red>html</font>
+ This is hosted by <img:sourceforge.jpg>
+end title
+
+{% for package_info in package_infos %}
+
+package {{package_info.domain}} {
+
+    {% for table_info in package_info.table_infos %}
+    map {{table_info.table_name}} {
+    }
+    {% endfor %}
+}
+
+{% endfor %}
+
+
+@enduml

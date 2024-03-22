@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.7", features = ["macros"] }
 axum-extra =  {version = "0.9" , features = ["multipart"] }
+askama = { version = "0.12", features = ["with-axum", "mime", "mime_guess"] }
+askama_axum = "0.3.0"
 tokio = { version = "1.0", features = ["full"] }
 chrono = "0.4"
 config = "0.13"

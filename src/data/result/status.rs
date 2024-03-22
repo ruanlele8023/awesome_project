@@ -42,7 +42,6 @@ impl<T> Status<T>
                 resp.msg = msg;
             }
         }
-
         resp
     }
 }

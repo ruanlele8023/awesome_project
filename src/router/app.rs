@@ -1,6 +1,8 @@
 use axum::Router;
 use axum::routing::{get, post};
 use crate::controller;
+use askama::Template;
+use axum::response::Html;
 
 pub fn init() -> Router{
 
@@ -16,6 +18,7 @@ pub fn init() -> Router{
 
     Router::new()
         .route("/hello", get(hello))
+        .route("/test", get(test))
         .nest("/table_info", table_router)
         .nest("/upload", upload_router)
         .nest("/plant_uml", plant_uml_router)
@@ -23,6 +26,19 @@ pub fn init() -> Router{
 
 async fn hello() -> String {
     String::from("hello axum")
+}
+
+async fn test() -> Result<Html<String>, String> {
+    let name = String::from("axum中文网");
+    let tpl = IndexTemplate { name };
+    let html = tpl.render().map_err(|err| err.to_string())?;
+    Ok(Html(html))
+}
+
+#[derive(Template)]
+#[template(path = "example.html")]
+pub struct IndexTemplate {
+    pub name: String,
 }
 
 async fn table_info_get() -> String {
