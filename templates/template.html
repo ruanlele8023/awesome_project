@@ -20,7 +20,22 @@ package {{package_info.domain}} {
     }
     {% endfor %}
 }
+{% endfor %}
 
+{% for chain in chains %}
+{{chain.start}}.{{chain.arrow}}.{{chain.end}}.{{chain.tag1}}.{{chain.tag2}}.{{chain.tag3}}.{{chain.tag4}}
+{% if chain.fields_flag -%}
+ note right
+    {{chain.rule_id}}
+    where:
+ {% for field in chain.fields  %}
+ {{field.table_name}}
+ {% for item in field.fields_name %}
+ {{item}}}
+{% endfor %}
+ {% endfor %}
+ end note
+{% endif -%}
 {% endfor %}
 
 

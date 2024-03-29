@@ -15,7 +15,7 @@ pub async fn insert(am: t_capital_rule::ActiveModel) -> Option<u64> {
     }
 }
 
-pub async fn query(query: HashMap<String, String>) -> Vec<Model> {
+pub async fn query(query: &HashMap<String, String>) -> Vec<Model> {
     let mut builder = TCapitalRule::find();
     match builder
         .order_by(t_capital_rule::Column::Id, Order::Desc)

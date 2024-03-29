@@ -61,12 +61,12 @@ pub struct Chain {
 
 pub struct Field {
     pub table_name: String,
-    pub fields: Vec<String>
+    pub fields_name: Vec<String>
 }
 
 pub async fn generate_plant_uml(query: HashMap<String, String>)  -> Result<ApiOK<String>> {
 
-    let capital_rules = dao::atomic_capital_rule::query(query).await;
+    let capital_rules = dao::atomic_capital_rule::query(&query).await;
 
     let capital_rules_ids  = capital_rules.clone().into_iter().map(|x1| {
         x1.rule_id
@@ -100,7 +100,7 @@ pub async fn generate_plant_uml(query: HashMap<String, String>)  -> Result<ApiOK
     }
 
     let package_infos = load_package_infos(table_id_to_info.clone());
-    let chains = load_chains(rule_id_to_rule_chains, rule_id_to_info, table_id_to_info.clone());
+    let chains = load_chains(rule_id_to_rule_chains, rule_id_to_info, table_id_to_info.clone(), &query.clone());
 
     let plant_uml_template = PlantUmlTemplate{
         package_infos,
@@ -117,14 +117,86 @@ pub async fn generate_plant_uml(query: HashMap<String, String>)  -> Result<ApiOK
     }
 }
 
+pub fn filter_display_chain_by_rule(mut rule: &crate::entity::t_capital_rule::Model, query: &HashMap<String, String>) -> bool {
+    let mut flag = true;
+    if query.contains_key("display_special") {
+        flag = rule.special.clone() != 0
+    }
+    if query.contains_key("display_data") {
+        let source_list: Vec<&str> = rule.rule_source.split(",").collect();
+        return  source_list.contains(&"data");
+    }
+    if query.contains_key("display_items") {
+        let type_list: Vec<&str> = rule.rule_type.split(",").collect();
+        return type_list.contains(&"items")
+    }
+    if query.contains_key("display_money") {
+        let type_list: Vec<&str> = rule.rule_type.split(",").collect();
+        return type_list.contains(&"money")
+    }
+    if query.contains_key("display_rights") {
+        let type_list: Vec<&str> = rule.rule_type.split(",").collect();
+        return type_list.contains(&"rights")
+    }
+    flag
+}
+
+pub fn render_arrow(online :bool, existed: bool, color: String) -> String {
+    let mut arrow = String::from("");
+    if existed {
+        if online {
+            arrow = format!("{}--", arrow)
+        } else {
+            arrow = format!("{}x-", arrow)
+        }
+    }else {
+        arrow = format!("{}..", arrow)
+    }
+
+    arrow = format!("{}{}", arrow, color);
+
+    if existed {
+        if online {
+            arrow = format!("{}>", arrow)
+        } else {
+            arrow = format!("{}x", arrow)
+        }
+    } else {
+        arrow = format!("{}.", arrow)
+    }
+    arrow
+}
+
+pub fn load_tag_info(chain: &mut Chain, rule_info : &crate::entity::t_capital_rule::Model, query: &HashMap<String, String>) {
+    if query.contains_key("scenes") && query.get("scenes").unwrap() == "scenes2" {
+        chain.tag1 = format!("【{}】", rule_info.special_name.clone())
+    } else {
+        if rule_info.rule_type != "" {
+            chain.tag1 = format!("【{}】", rule_info.rule_type.clone())
+        }
+        if rule_info.rule_source != "" {
+            chain.tag2 = format!("【{}】", rule_info.rule_source.clone())
+        }
+        if rule_info.reconciliation_classification != "" {
+            chain.tag3 = format!("【{}】", rule_info.reconciliation_classification.clone())
+        }
+    }
+    chain.tag4 = rule_info.rule_id.clone()
+}
+
 pub fn load_chains(rule_id_to_chains: HashMap<String, Vec<crate::entity::t_capital_rule_chain::Model>>,
                    mut rule_id_to_info: HashMap<String, crate::entity::t_capital_rule::Model>,
-                   mut table_id_to_info: HashMap<u64, Model>) -> Vec<Chain> {
+                   mut table_id_to_info: HashMap<u64, Model>,
+                   query: &HashMap<String, String>,
+) -> Vec<Chain> {
     let mut chains_lack_collection: HashMap<String, HashMap<String, HashMap<String, bool>>> = HashMap::new();
     let mut res: Vec<Chain> = Vec::new();
 
     for (key, chains) in &rule_id_to_chains {
         let rule_info = rule_id_to_info.get_mut(key).unwrap();
+        if !filter_display_chain_by_rule(rule_info, &query) {
+            continue;
+        }
         for  (idx1, value) in  chains.iter().enumerate() {
             if chains.length() != 1 && idx1 == chains.length() as usize - 1 {
                 continue;
@@ -133,15 +205,29 @@ pub fn load_chains(rule_id_to_chains: HashMap<String, Vec<crate::entity::t_capit
             let mut chain: Chain = Default::default();
             chain.rule_id = idx1.to_string();
             // chain.start = table_id_to_info.get_mut((*value.table_info_id) as u64);
+            let table_info_id:u64 = value.table_info_id as u64;
+            chain.start = table_id_to_info.get(&table_info_id).unwrap().table_info_name.clone();
             if chains.length() == 1 {
                 chain.end = chain.start.clone()
             } else {
-                // chain.end = table_id_to_info.get(*chains.get(idx1  + 1).unwrap().table_info_id.clone()).unwrap().table_info_name.clone()
+                let table_info_id:u64 = chains.get(idx1  + 1).unwrap().table_info_id as u64;
+                chain.end = table_id_to_info.get(&table_info_id).unwrap().table_info_name.clone()
+            }
+            chain.arrow = render_arrow(rule_info.online != 0, true,  String::from("[#40E0D0]"));
+            load_tag_info(&mut chain, rule_info, &query);
+            chain.fields_flag = false;
+            if query.contains_key("fields") && idx1 == 0 && check_table_fields_existed(chains) {
+                chain.fields_flag = true;
             }
             res.push(chain)
         }
     }
     res
+}
+
+fn check_table_fields_existed(chains: &Vec<crate::entity::t_capital_rule_chain::Model>) -> bool {
+    chains.clone().into_iter().filter(|x1| { x1.table_fields != ""}
+    ).count() != 0
 }
 
 pub fn load_package_infos(table_id_to_info: HashMap<u64, Model>) -> Vec<PackageInfo> {
